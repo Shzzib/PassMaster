@@ -1,0 +1,43 @@
+
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Sign In — PassMaster</title><link rel="stylesheet" href="style.css"/></head>
+<body>
+  <div class="container">
+    <header class="header"><div class="logo">PassMaster</div><nav class="nav"><a href="index.html" class="btn ghost">Home</a><a href="signup.html" class="btn">Sign Up</a></nav></header>
+    <main style="margin-top:24px">
+      <div class="card" style="max-width:520px;margin:auto">
+        <h2>Sign in</h2>
+        <div class="form">
+          <label class="label">Username</label><input id="si_user" class="input"/>
+          <label class="label">Password</label><input id="si_pass" class="input" type="password"/>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button id="doSignIn" class="btn">Sign In</button>
+            <a href="signup.html" class="btn ghost">Create account</a>
+          </div>
+        </div>
+      </div>
+    </main>
+    <footer class="footer">• PassMaster •</footer>
+  </div>
+<script>
+
+// Shared helpers for multi-page app
+function qs(sel){return document.querySelector(sel)}
+function qsa(sel){return Array.from(document.querySelectorAll(sel))}
+function saveUsers(obj){ localStorage.setItem('app_users', JSON.stringify(obj)) }
+function loadUsers(){ return JSON.parse(localStorage.getItem('app_users')||'{}') }
+function nowISO(){ return new Date().toISOString() }
+function formatLocal(dt){ try{return new Date(dt).toLocaleString()}catch(e){return dt} }
+
+// Sign in logic
+qs('#doSignIn').addEventListener('click', ()=>{
+  const u = qs('#si_user').value.trim(); const p = qs('#si_pass').value||'';
+  if(u==='admin' && p==='admin'){ sessionStorage.setItem('pm_user','admin'); window.location='admin.html'; return; }
+  const users = loadUsers(); if(!users[u]){ alert('No such user'); return; }
+  if(users[u].password !== p){ alert('Wrong password'); return; }
+  sessionStorage.setItem('pm_user', u); window.location='dashboard.html';
+});
+</script>
+</body>
+</html>

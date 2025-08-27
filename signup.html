@@ -1,0 +1,44 @@
+
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Sign Up — PassMaster</title><link rel="stylesheet" href="style.css"/></head>
+<body>
+  <div class="container">
+    <header class="header"><div class="logo">PassMaster</div><nav class="nav"><a href="index.html" class="btn ghost">Home</a><a href="signin.html" class="btn">Sign In</a></nav></header>
+    <main style="margin-top:24px">
+      <div class="card" style="max-width:680px;margin:auto">
+        <h2>Create an account</h2>
+        <div class="form" id="signupForm">
+          <label class="label">Username</label><input id="su_user" class="input" placeholder="pick a username"/>
+          <label class="label">Password</label><input id="su_pass" class="input" type="password" placeholder="choose a password"/>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="doSignUp" class="btn">Create Account</button>
+            <a href="signin.html" class="btn ghost">Already have an account</a>
+          </div>
+        </div>
+      </div>
+    </main>
+    <footer class="footer">• PassMaster •</footer>
+  </div>
+<script>
+
+// Shared helpers for multi-page app
+function qs(sel){return document.querySelector(sel)}
+function qsa(sel){return Array.from(document.querySelectorAll(sel))}
+function saveUsers(obj){ localStorage.setItem('app_users', JSON.stringify(obj)) }
+function loadUsers(){ return JSON.parse(localStorage.getItem('app_users')||'{}') }
+function nowISO(){ return new Date().toISOString() }
+function formatLocal(dt){ try{return new Date(dt).toLocaleString()}catch(e){return dt} }
+
+// Sign up logic
+qs('#doSignUp').addEventListener('click', ()=>{
+  const u = qs('#su_user').value.trim(); const p = qs('#su_pass').value||'';
+  if(!u){ alert('Enter username'); return; }
+  const users = loadUsers();
+  if(users[u]){ alert('Username taken'); return; }
+  users[u] = { password: p, created: nowISO(), logs: [] };
+  saveUsers(users); alert('Account created locally. You can sign in.'); window.location='signin.html';
+});
+</script>
+</body>
+</html>

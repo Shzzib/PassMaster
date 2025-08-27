@@ -1,0 +1,128 @@
+
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Dashboard — PassMaster</title><link rel="stylesheet" href="style.css"/></head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo">PassMaster</div>
+      <nav class="nav"><a href="index.html" class="btn ghost">Home</a><button id="signOut" class="btn ghost">Sign Out</button></nav>
+    </header>
+
+    <main style="margin-top:18px">
+      <div class="card">
+        <h2>Welcome to your Password Analyzer</h2>
+      </div>
+
+      <div class="dashboard-grid" style="margin-top:16px">
+        <div class="panel card">
+          <h3>Analyze a password</h3>
+          <div class="field"><label class="label">Password</label><input id="pwInput" class="input" type="password" placeholder="Type a password to analyze"/></div>
+          <div class="strengthRow">
+            <div id="statusLabel" class="status">Strength: —</div>
+            <div class="strengthBar"><div id="strengthFill" class="strengthFill"></div></div>
+          </div>
+          <div class="field"><label class="label">Estimated crack time</label><div id="crackTime" class="small muted">—</div></div>
+          <div class="field"><label class="label">Suggestions</label><ul id="suggestions" class="small"></ul></div>
+          <div style="display:flex;gap:10px;margin-top:10px">
+            <button id="generateBtn" class="btn">Generate Strong Password</button>
+            <button id="saveBtn" class="btn ghost">Save example locally</button>
+          </div>
+          <div id="generated" style="margin-top:10px;color:var(--muted)"></div>
+        </div>
+
+        <aside class="card panel">
+          <h4>Session</h4>
+          <div class="small muted">Signed in as <strong id="curUser">—</strong></div>
+          <div style="margin-top:12px">
+            <button id="viewSaved" class="btn ghost small">View my saved entries</button>
+          </div>
+          <div style="margin-top:16px">
+            <h5>Saved Examples</h5>
+            <div id="myList" class="small muted">No saved examples</div>
+          </div>
+        </aside>
+      </div>
+    </main>
+    <div id="overlay" class="overlay"></div>
+    <footer class="footer">• PassMaster •</footer>
+  </div>
+
+<script>
+
+// Shared helpers for multi-page app
+function qs(sel){return document.querySelector(sel)}
+function qsa(sel){return Array.from(document.querySelectorAll(sel))}
+function saveUsers(obj){ localStorage.setItem('app_users', JSON.stringify(obj)) }
+function loadUsers(){ return JSON.parse(localStorage.getItem('app_users')||'{}') }
+function nowISO(){ return new Date().toISOString() }
+function formatLocal(dt){ try{return new Date(dt).toLocaleString()}catch(e){return dt} }
+
+// Page init
+const user = sessionStorage.getItem('pm_user'); if(!user){ alert('Not signed in'); window.location='signin.html' } qs('#curUser').innerText = user;
+
+// sign out
+qs('#signOut').addEventListener('click', ()=>{ sessionStorage.removeItem('pm_user'); window.location='index.html' });
+
+// entropy estimator 
+function estimateEntropy(pw){
+  if(!pw) return {bits:0,guesses:0};
+  let pool=0; if(/[a-z]/.test(pw)) pool+=26; if(/[A-Z]/.test(pw)) pool+=26;
+  if(/[0-9]/.test(pw)) pool+=10; if(/[^a-zA-Z0-9]/.test(pw)) pool+=32;
+  const bits = Math.floor(Math.log2(Math.max(pool,1))*pw.length);
+  const guesses = Math.pow(2, Math.min(bits,60));
+  return {bits,guesses};
+}
+function formatTime(seconds){
+  if(!isFinite(seconds)) return 'Too long to measure';
+  const units=[['years',31536000],['days',86400],['hours',3600],['minutes',60],['seconds',1]];
+  for(const [name,val] of units){ if(seconds>=val) return Math.floor(seconds/val)+' '+name; }
+  return Math.floor(seconds)+' seconds';
+}
+
+// UI update
+qs('#pwInput').addEventListener('input', ()=>{ updateFor(qs('#pwInput').value) });
+function updateFor(pw){
+  const ent = estimateEntropy(pw);
+  const guessesPerSec = 1e8; const secs = ent.guesses/guessesPerSec;
+  let strength='Weak', pct=10, bg='var(--danger)';
+  if(ent.bits>=60 || secs>3153600000){ strength='Strong'; pct=100; bg='linear-gradient(90deg,var(--success),#4ade80)' }
+  else if(ent.bits>=40 || secs>2592000){ strength='Medium'; pct=60; bg='linear-gradient(90deg,var(--warning),#ffecb3)' }
+  else { strength='Weak'; pct=Math.min(60,Math.max(8,ent.bits)) }
+  qs('#statusLabel').innerText = 'Strength: '+strength; qs('#strengthFill').style.width = pct+'%'; qs('#strengthFill').style.background = bg;
+  qs('#crackTime').innerText = secs>0?formatTime(secs):'instantly';
+  const sug=[]; if(pw.length<12)sug.push('Increase length to 12+ chars'); if(!/[A-Z]/.test(pw))sug.push('Add uppercase letters'); if(!/[0-9]/.test(pw))sug.push('Include numbers'); if(!/[^a-zA-Z0-9]/.test(pw))sug.push('Add symbols like !@#$%'); qs('#suggestions').innerHTML = sug.map(s=>'<li>'+s+'</li>').join('')||'<li>Looks good — consider longer passphrase</li>';
+  // overlay fade (10s)
+  triggerOverlay(strength.toLowerCase(),10000);
+  // show generate only on weak
+  qs('#generateBtn').style.display = (strength==='Weak')?'inline-block':'none';
+}
+
+// overlay control
+let ovTimeout=null;
+function triggerOverlay(kind,ms=8000){
+  const o = qs('#overlay'); o.className='overlay show'; if(kind==='weak') o.style.background = 'linear-gradient(90deg,rgba(239,68,68,0.12),rgba(239,68,68,0.06))'; else if(kind==='medium') o.style.background='linear-gradient(90deg,rgba(245,158,11,0.1),rgba(245,158,11,0.04))'; else o.style.background='linear-gradient(90deg,rgba(16,185,129,0.08),rgba(16,185,129,0.04))'; clearTimeout(ovTimeout); ovTimeout=setTimeout(()=>{ o.className='overlay'; }, ms);
+}
+
+// generate related password
+qs('#generateBtn').addEventListener('click', ()=>{
+  const base = qs('#pwInput').value||'pw'; const gen = genRelated(base); qs('#generated').innerText = 'Generated: '+gen; qs('#pwInput').value = gen; updateFor(gen);
+});
+function genRelated(base){
+  const m = base.match(/[a-zA-Z0-9]{3,}/); const core = m?m[0]:'pm'; const rnd = Math.random().toString(36).slice(-6); const sym = ['!','$','@','#'][Math.floor(Math.random()*4)]; const cap = core.split('').map((c,i)=> i%2? c.toUpperCase(): c.toLowerCase()).join(''); return cap + sym + rnd + Math.floor(Math.random()*90+10);
+}
+
+// save example for current user
+qs('#saveBtn').addEventListener('click', ()=>{
+  const cur = sessionStorage.getItem('pm_user'); if(!cur){ alert('Not signed in'); return; }
+  const users = loadUsers(); users[cur] = users[cur] || {password:'',created:nowISO(),logs:[]}; users[cur].logs = users[cur].logs || [];
+  users[cur].logs.push({password: qs('#pwInput').value||'', time: nowISO()}); saveUsers(users); alert('Saved locally (demo)'); renderSaved();
+});
+
+// render saved entries for this user
+function renderSaved(){ const cur = sessionStorage.getItem('pm_user'); const users = loadUsers(); const node = qs('#myList'); if(!users[cur] || !users[cur].logs || users[cur].logs.length===0){ node.innerText='No saved examples'; return; } node.innerHTML = users[cur].logs.map(l=>'<div style="padding:8px;border-radius:8px;border:1px solid rgba(15,23,42,0.04);margin-bottom:8px"><div style="font-weight:600">'+formatLocal(l.time)+'</div><div style="color:var(--muted);font-size:13px">'+ (l.password? l.password:'(empty)') +'</div></div>').join(''); }
+qs('#viewSaved').addEventListener('click', renderSaved);
+renderSaved();
+</script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>PassMaster — Professional Password Insights</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="logo">PassMaster</div>
+      <nav class="nav">
+        <a href="signin.html" class="btn ghost">Sign In</a>
+        <a href="signup.html" class="btn">Sign Up</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <div class="hero-left card">
+        <h1>Protect your accounts with clear, professional password insights</h1>
+        <p class="lead" id="aboutText"></p>
+        <div class="cta">
+          <a href="signup.html" class="btn">Get Started</a>
+          <a href="signin.html" class="btn ghost">I already have an account</a>
+        </div>
+      </div>
+      <aside class="hero-right">
+        <div class="card">
+          <h3>Quick Analyzer</h3>
+          <p class="small">Type a sample password to get a quick strength preview</p>
+          <input id="quickPw" class="input" placeholder="Try: MyP@ss123!" />
+          <div class="strengthRow">
+            <div id="qstatus" class="status">—</div>
+            <div class="strengthBar"><div id="qfill" class="strengthFill"></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <h4>Why PassMaster?</h4>
+          <p class="small">Simple, local, and educational: helps you learn what makes a password strong, and gives instant suggestions.</p>
+        </div>
+      </aside>
+    </section>
+
+    <footer class="footer">• PassMaster •</footer>
+  </div>
+<script>
+
+// Shared helpers for multi-page app
+function qs(sel){return document.querySelector(sel)}
+function qsa(sel){return Array.from(document.querySelectorAll(sel))}
+function saveUsers(obj){ localStorage.setItem('app_users', JSON.stringify(obj)) }
+function loadUsers(){ return JSON.parse(localStorage.getItem('app_users')||'{}') }
+function nowISO(){ return new Date().toISOString() }
+function formatLocal(dt){ try{return new Date(dt).toLocaleString()}catch(e){return dt} }
+
+const about = "PassMaster is a focused and professional tool created to help users and teams understand password safety. It offers concise, practical feedback — estimating how long a password might withstand common cracking techniques, offering targeted suggestions for improvement, and allowing users to experiment with generated alternatives. The interface emphasizes clarity: quick visual cues for strength, a readable crack-time estimate, and an easy-to-use generation flow that returns memorable but stronger options. All analysis runs locally in your browser; nothing is transmitted. This makes PassMaster excellent for learning, prototyping, or internal demos. For production systems, always pair client-side guidance with secure server-side handling: hash and salt passwords, apply rate-limiting, and use proven authentication services. PassMaster’s goal is to educate, not to replace secure identity solutions.";
+
+document.getElementById('aboutText').innerText = about;
+
+// Quick analyzer logic (basic)
+function estimate(pw){
+  if(!pw) return {bits:0};
+  let pool=0; if(/[a-z]/.test(pw)) pool+=26; if(/[A-Z]/.test(pw)) pool+=26;
+  if(/[0-9]/.test(pw)) pool+=10; if(/[^a-zA-Z0-9]/.test(pw)) pool+=32;
+  const bits = Math.floor(Math.log2(Math.max(pool,1))*pw.length);
+  return {bits};
+}
+qs('#quickPw').addEventListener('input', ()=>{
+  const r = estimate(qs('#quickPw').value); let status='Weak', pct=10, col='linear-gradient(90deg,#ff6b6b,#ff9b9b)';
+  if(r.bits>=60){ status='Strong'; pct=100; col='linear-gradient(90deg,#8ef58e,#3bd36b)'}
+  else if(r.bits>=40){ status='Medium'; pct=60; col='linear-gradient(90deg,#ffd166,#ffea8a)'}
+  else {status='Weak'; pct=Math.min(60,Math.max(8,r.bits))}
+  qs('#qstatus').innerText = status; qs('#qfill').style.width = pct+'%'; qs('#qfill').style.background = col;
+})
+</script>
+</body>
+</html>

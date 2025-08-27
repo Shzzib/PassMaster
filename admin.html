@@ -1,0 +1,54 @@
+
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Admin — PassMaster</title><link rel="stylesheet" href="style.css"/></head>
+<body>
+  <div class="container">
+    <header class="header"><div class="logo">PassMaster</div><nav class="nav"><a href="index.html" class="btn ghost">Home</a><button id="adminSignOut" class="btn ghost">Sign Out</button></nav></header>
+    <main style="margin-top:18px">
+      <div class="card"><h2>Admin Console</h2><p class="small"></p></div>
+      <div class="card" style="margin-top:16px;overflow:auto">
+        <table class="table" id="adminTable"><thead><tr><th>User</th><th>Saved Password</th><th>Time</th><th>Actions</th></tr></thead><tbody></tbody></table>
+      </div>
+    </main>
+    <footer class="footer">PassMaster • Admin</footer>
+  </div>
+<script>
+
+// Shared helpers for multi-page app
+function qs(sel){return document.querySelector(sel)}
+function qsa(sel){return Array.from(document.querySelectorAll(sel))}
+function saveUsers(obj){ localStorage.setItem('app_users', JSON.stringify(obj)) }
+function loadUsers(){ return JSON.parse(localStorage.getItem('app_users')||'{}') }
+function nowISO(){ return new Date().toISOString() }
+function formatLocal(dt){ try{return new Date(dt).toLocaleString()}catch(e){return dt} }
+
+// admin auth check
+const cur = sessionStorage.getItem('pm_user'); if(cur!=='admin'){ alert('Admin only'); window.location='signin.html' }
+qs('#adminSignOut').addEventListener('click', ()=>{ sessionStorage.removeItem('pm_user'); window.location='index.html' })
+
+// render table
+function renderAdmin(){
+  const tbody = qs('#adminTable tbody'); tbody.innerHTML='';
+  const users = loadUsers(); const keys = Object.keys(users);
+  if(keys.length===0){ tbody.innerHTML='<tr><td colspan="4" class="small muted">No stored users</td></tr>'; return; }
+  keys.forEach(u=>{
+    const logs = users[u].logs||[]; if(logs.length===0){ tbody.innerHTML += '<tr><td>'+u+'</td><td colspan="3" class="small muted">No saved passwords</td></tr>'; return; }
+    logs.forEach(l=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>'+u+'</td><td>'+escapeHtml(l.password)+'</td><td>'+formatLocal(l.time)+'</td><td><button class="btn ghost small" data-user="'+u+'" data-time="'+l.time+'">Delete</button></td>';
+      tbody.appendChild(tr);
+    });
+  });
+  // attach delete handlers
+  Array.from(document.querySelectorAll('button[data-user]')).forEach(b=>b.addEventListener('click', (e)=>{
+    const u = e.currentTarget.dataset.user; const t = e.currentTarget.dataset.time;
+    if(!confirm('Delete this saved entry?')) return;
+    const users = loadUsers(); users[u].logs = (users[u].logs||[]).filter(x=>x.time!==t); saveUsers(users); renderAdmin();
+  }));
+}
+function escapeHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+renderAdmin();
+</script>
+</body>
+</html>
